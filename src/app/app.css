@@ -604,6 +604,50 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
   box-shadow: 0 0 0 2px rgba(124,111,255,0.25);
 }
 
+.todo-card--archived {
+  opacity: 0.45;
+  filter: grayscale(0.4);
+}
+.todo-card--archived:hover { opacity: 0.7; }
+
+.btn-clean {
+  padding: 7px 12px;
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.btn-clean:hover { border-color: var(--orange); color: var(--orange); }
+
+.confirm-clean {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.btn-toggle-forgotten {
+  padding: 7px 12px;
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+.btn-toggle-forgotten:hover { border-color: var(--accent); color: var(--accent); }
+.btn-toggle-forgotten.active { border-color: var(--accent); color: var(--accent); background: rgba(124,111,255,0.1); }
+
 /* ── Add swimlane ── */
 .add-lane { padding: 14px 0 0 0; }
 .btn-add-lane {
@@ -677,4 +721,5 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
   /* Buttons in header: tighter */
   .btn-primary { padding: 8px 12px; font-size: 0.84rem; }
   .btn-leave { padding: 7px 10px; }
+  .btn-clean, .btn-toggle-forgotten, .confirm-clean { display: none; }
 }

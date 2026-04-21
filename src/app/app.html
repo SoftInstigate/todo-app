@@ -143,6 +143,18 @@
         <button class="btn-primary" (click)="showForm.set(!showForm())">
           {{ showForm() ? '✕ Close' : '+ New task' }}
         </button>
+        @if (confirmingClean) {
+          <span class="confirm-clean">
+            Archive all closed?
+            <button class="btn-confirm-yes" (click)="cleanClosed()">Yes</button>
+            <button class="btn-confirm-no" (click)="confirmingClean = false">No</button>
+          </span>
+        } @else {
+          <button class="btn-clean" (click)="confirmingClean = true" title="Archive all closed tasks">🗂 Archive closed</button>
+        }
+        <button class="btn-toggle-forgotten" [class.active]="showForgotten()" (click)="showForgotten.set(!showForgotten())" title="Show archived tasks">
+          {{ showForgotten() ? '👁 Hide archived' : '👁 Show archived' }}
+        </button>
         <button class="btn-leave" (click)="leaveGroup()" title="Switch group">⇠</button>
       </div>
     </header>
@@ -238,6 +250,7 @@
                   <div cdkDrag [cdkDragData]="todo"
                        class="todo-card"
                        [class.todo-card--selected]="selectedTodo()?._id?.$oid === todo._id?.$oid"
+                       [class.todo-card--archived]="todo.status === 'closed_and_forgot'"
                        (click)="openTask(todo, $event)">
                     <div class="card-title">{{ todo.title }}</div>
                     @if (todo.notes) {

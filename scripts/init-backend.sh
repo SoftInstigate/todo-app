@@ -56,7 +56,7 @@ cat > "$SCHEMA_FILE" << 'EOF'
   "type": "object",
   "properties": {
     "title":      { "type": "string" },
-    "status":     { "type": "string", "enum": ["open", "in-progress", "blocked", "closed"] },
+    "status":     { "type": "string", "enum": ["open", "in-progress", "blocked", "closed", "closed_and_forgot"] },
     "groupId":    { "type": "string" },
     "swimlaneId": { "type": "string" },
     "assignees":  { "type": "array", "items": { "type": "string" } },

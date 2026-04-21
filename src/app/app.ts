@@ -1,6 +1,7 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { forkJoin } from 'rxjs';
 import { TodoService, Todo, Status } from './todo.service';
 import { SwimlaneService, Swimlane } from './swimlane.service';
 import { GroupService } from './group.service';
@@ -25,6 +26,8 @@ export class App implements OnInit {
   renameValue = '';
   justCreatedCode: string | null = null;
   copied = false;
+  showForgotten = signal(false);
+  confirmingClean = false;
 
   // group screen
   newGroupName = '';
@@ -42,7 +45,7 @@ export class App implements OnInit {
 
   readonly statuses: Status[] = ['open', 'in-progress', 'blocked', 'closed'];
   readonly statusLabels: Record<Status, string> = {
-    'open': 'Open', 'in-progress': 'In Progress', 'blocked': 'Blocked', 'closed': 'Closed',
+    'open': 'Open', 'in-progress': 'In Progress', 'blocked': 'Blocked', 'closed': 'Closed', 'closed_and_forgot': 'Closed',
   };
 
   form = { title: '', notes: '', tags: '', swimlaneId: '' };
@@ -62,12 +65,22 @@ export class App implements OnInit {
     return [...names].sort();
   });
 
+  constructor() {
+    effect(() => {
+      // reload when showForgotten changes, but only if a group is active
+      this.showForgotten();
+      if (this.groupSvc.code()) {
+        this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t));
+      }
+    });
+  }
+
   ngOnInit() {
     if (this.groupSvc.code()) this.loadAll();
   }
 
   loadAll() {
-    this.todoSvc.getAll().subscribe(t => this.todos.set(t));
+    this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t));
     this.laneSvc.getAll().subscribe(lanes => {
       if (lanes.length === 0) {
         this.laneSvc.create('Default', 0).subscribe(() =>
@@ -184,7 +197,7 @@ export class App implements OnInit {
       swimlaneId: this.editForm.swimlaneId,
     }).subscribe(() => {
       this.selectedTodo.set(null);
-      this.todoSvc.getAll().subscribe(t => this.todos.set(t));
+      this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t));
     });
   }
 
@@ -207,11 +220,22 @@ export class App implements OnInit {
 
   // ── Board ────────────────────────────────────────────────────────────────────
 
+  cleanClosed() {
+    const toArchive = this.todos().filter(t => t.status === 'closed');
+    if (!toArchive.length) { this.confirmingClean = false; return; }
+    forkJoin(toArchive.map(t => this.todoSvc.update(t, { status: 'closed_and_forgot' }))).subscribe(() => {
+      this.confirmingClean = false;
+      this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t));
+    });
+  }
+
   getCards(laneId: string, status: Status): Todo[] {
     const fallbackId = this.swimlanes()[0]?._id?.$oid;
-    return this.todos().filter(t =>
-      (t.swimlaneId ?? fallbackId) === laneId && t.status === status
-    );
+    const matchStatus = (t: Todo) =>
+      status === 'closed' && this.showForgotten()
+        ? t.status === 'closed' || t.status === 'closed_and_forgot'
+        : t.status === status;
+    return this.todos().filter(t => (t.swimlaneId ?? fallbackId) === laneId && matchStatus(t));
   }
 
   addAssignee(name: string) {
@@ -245,7 +269,7 @@ export class App implements OnInit {
       this.form = { ...this.form, title: '', notes: '', tags: '' };
       this.formAssignees = [];
       this.showForm.set(false);
-      this.todoSvc.getAll().subscribe(t => this.todos.set(t));
+      this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t));
     });
   }
 
@@ -254,7 +278,7 @@ export class App implements OnInit {
     const todo: Todo = event.item.data;
     const { laneId, status } = event.container.data;
     this.todoSvc.update(todo, { status, swimlaneId: laneId }).subscribe(() =>
-      this.todoSvc.getAll().subscribe(t => this.todos.set(t))
+      this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t))
     );
   }
 
@@ -296,7 +320,7 @@ export class App implements OnInit {
     this.confirmingId = null;
     if (this.selectedTodo()?._id?.$oid === todo._id?.$oid) this.selectedTodo.set(null);
     this.todoSvc.delete(todo).subscribe(() =>
-      this.todoSvc.getAll().subscribe(t => this.todos.set(t))
+      this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t))
     );
   }
 

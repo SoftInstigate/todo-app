@@ -6,7 +6,7 @@ import { environment } from '../environments/environment';
 const BASE = `${environment.restheartUrl}/todos`;
 const HEADERS = new HttpHeaders({ 'Content-Type': 'application/json' });
 
-export type Status = 'open' | 'in-progress' | 'blocked' | 'closed';
+export type Status = 'open' | 'in-progress' | 'blocked' | 'closed' | 'closed_and_forgot';
 
 export interface Todo {
   _id?: { $oid: string };
@@ -30,11 +30,12 @@ export class TodoService {
     return this.groupSvc.code()!;
   }
 
-  getAll() {
-    return this.http.get<Todo[]>(BASE, {
-      headers: HEADERS,
-      params: { groupId: this.groupId },
-    });
+  getAll(includeForgotten = false) {
+    const params: Record<string, string> = { groupId: this.groupId };
+    if (!includeForgotten) {
+      params['filter'] = JSON.stringify({ status: { $ne: 'closed_and_forgot' } });
+    }
+    return this.http.get<Todo[]>(BASE, { headers: HEADERS, params });
   }
 
   create(data: { title: string; notes?: string; tags?: string[]; swimlaneId?: string; assignees?: string[] }) {

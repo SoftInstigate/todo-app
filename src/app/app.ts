@@ -27,6 +27,7 @@ export class App implements OnInit {
   showLaneForm  = false;
   confirmingId: string | null = null;
   renamingId:   string | null = null;
+  laneDeleteError: string | null = null;
   renameValue = '';
   justCreatedCode: string | null = null;
   copied = false;
@@ -333,9 +334,16 @@ export class App implements OnInit {
   }
 
   deleteLane(lane: Swimlane) {
-    this.laneSvc.delete(lane).subscribe(() =>
-      this.laneSvc.getAll().subscribe(l => this.swimlanes.set(l))
-    );
+    this.todoSvc.hasBySwimlane(lane._id!.$oid).subscribe(has => {
+      if (has) {
+        this.laneDeleteError = lane._id!.$oid;
+        setTimeout(() => this.laneDeleteError = null, 3000);
+        return;
+      }
+      this.laneSvc.delete(lane).subscribe(() =>
+        this.laneSvc.getAll().subscribe(l => this.swimlanes.set(l))
+      );
+    });
   }
 
   askDelete(todo: Todo) { this.confirmingId = todo._id!.$oid; }

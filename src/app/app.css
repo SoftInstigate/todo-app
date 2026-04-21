@@ -440,6 +440,7 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
   transition: color 0.2s, background 0.2s;
 }
 .btn-icon:hover { color: var(--red); background: #2e1a1a; }
+.lane-delete-error { font-size: 0.75rem; color: var(--red); padding: 2px 6px; }
 
 /* ── Kanban cell ── */
 .kanban-cell {

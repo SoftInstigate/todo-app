@@ -236,7 +236,11 @@
               } @else {
                 <span class="lane-name" (dblclick)="startRename(lane)" title="Double-click to rename">{{ lane.name }}</span>
               }
-              <button class="btn-icon" (click)="deleteLane(lane)" title="Delete swimlane">✕</button>
+              @if (laneDeleteError === lane._id?.$oid) {
+                <span class="lane-delete-error">Move tasks first</span>
+              } @else {
+                <button class="btn-icon" (click)="deleteLane(lane)" title="Delete swimlane">✕</button>
+              }
             </div>
 
             @for (status of statuses; track status) {

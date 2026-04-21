@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { map } from 'rxjs';
 import { GroupService } from './group.service';
 import { environment } from '../environments/environment';
 
@@ -63,6 +64,13 @@ export class TodoService {
       headers: HEADERS,
       params: { groupId: this.groupId },
     });
+  }
+
+  hasBySwimlane(swimlaneId: string) {
+    return this.http.get<Todo[]>(BASE, {
+      headers: HEADERS,
+      params: { groupId: this.groupId, filter: JSON.stringify({ swimlaneId }), pagesize: '1' },
+    }).pipe(map(todos => todos.length > 0));
   }
 
   delete(todo: Todo) {

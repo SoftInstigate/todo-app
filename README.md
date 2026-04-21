@@ -1,37 +1,41 @@
 # Todo Board
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Angular](https://img.shields.io/badge/Angular-21-dd0031?logo=angular)](https://angular.dev)
+[![RESTHeart Cloud](https://img.shields.io/badge/RESTHeart-Cloud-7c6fff)](https://cloud.restheart.org)
 
-A collaborative Kanban board backed by RESTHeart Cloud. Teams share a group code to access a shared board with swimlanes, drag-and-drop cards across Open / In Progress / Blocked / Closed columns, assignees, tags, and notes. No login required — RESTHeart ACL rules enforce data isolation via a `groupId` query parameter.
+> A collaborative Kanban board with zero backend code — powered by **RESTHeart Cloud**.
 
-## What it does
+![Todo Board screenshot](https://todo.softinstigate.com/preview.png)
 
-- **Kanban board** with swimlanes (rows) and status columns: Open · In Progress · Blocked · Closed
-- **Drag & drop** cards between columns (changes status) and between swimlanes
-- **Swimlane reordering** via drag & drop on the row handle
-- **Group codes** — generate a shareable code to collaborate with your team, no login required
-- **Assignees** with autocomplete from names already used in the group
-- **Tags** and **notes** on each task
-- **Dark theme**
-- Data persisted on **MongoDB** via RESTHeart Cloud REST API
+---
 
-## How it was created
+## Features
 
-This application was built entirely with **[Claude Code](https://claude.ai/code)** (Anthropic).
+| | |
+|---|---|
+| 🗂 **Kanban board** | Swimlanes × status columns: Open · In Progress · Blocked · Closed |
+| 🖱 **Drag & drop** | Move cards across columns and reorder swimlanes |
+| 👥 **Group codes** | Share an 8-char code with your team — no login required |
+| 🔒 **Server-side isolation** | RESTHeart ACL ensures each group sees only its own data |
+| 🙋 **Assignees** | Autocomplete from names already used in the group |
+| 🏷 **Tags & notes** | Attach metadata to every task |
+| 💾 **Backup / restore** | Export and import your group codes as JSON |
+| 📱 **Responsive** | Works on mobile — task panel slides up as a bottom sheet |
+| 🌙 **Dark theme** | Easy on the eyes |
 
-- The **Angular frontend** was scaffolded and iteratively developed through a conversation with Claude Code, which wrote all components, services, drag & drop logic, and styles.
-- The **RESTHeart Cloud backend** was configured using the **Sophia MCP server** — an MCP tool that gives Claude Code access to the RESTHeart documentation knowledge base. This allowed Claude to autonomously set up collections, JSON Schema validation, ACL rules, and users by querying the docs and executing `httpie` commands directly.
-
-No code was written manually.
+---
 
 ## Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Angular 21 (standalone, signals) |
+| Frontend | Angular 21 (standalone components, signals) |
 | Drag & drop | `@angular/cdk/drag-drop` |
-| Backend | [RESTHeart Cloud](https://cloud.restheart.org) (managed REST API on MongoDB) |
-| Styling | CSS custom properties, Inter font |
+| Backend | [RESTHeart Cloud](https://cloud.restheart.org) — managed REST API on MongoDB |
+| Styling | CSS custom properties · Inter font |
+
+---
 
 ## Getting started
 
@@ -45,32 +49,35 @@ npm install
 
 ### 2. Create a RESTHeart Cloud account
 
-1. Go to [cloud.restheart.org](https://cloud.restheart.org) and sign up for a free account.
-2. Create a new instance. Once provisioned, open the instance dashboard.
-3. Copy the **Instance URL** — it looks like `https://xxxx.eu-central-1-free-1.restheart.com`. You will need it in the next steps.
-4. Note the **root password** you set during provisioning (or find it in the dashboard under *Credentials*).
+1. Sign up at [cloud.restheart.org](https://cloud.restheart.org) — the free tier is enough.
+2. Create a new instance and wait for it to be provisioned.
+3. Open the instance dashboard and copy the **Instance URL**:
+   ```
+   https://xxxx.eu-central-1-free-1.restheart.com
+   ```
+4. Note the **root password** you set during provisioning (also visible under *Credentials* in the dashboard).
 
 ### 3. Initialize the backend
 
-Run the initialization script with your instance URL and root credentials. It requires [HTTPie](https://httpie.io) (`brew install httpie`).
+The script requires [HTTPie](https://httpie.io) — install it with `brew install httpie` on macOS.
 
 ```bash
 ./scripts/init-backend.sh <instance-url> <root-user> <root-password>
 ```
 
-**Example:**
 ```bash
+# Example
 ./scripts/init-backend.sh https://xxxx.eu-central-1-free-1.restheart.com root mypassword
 ```
 
-The script creates:
+The script sets up:
 - `todos` and `swimlanes` collections
-- `_schemas` store with the `todo` JSON Schema
+- `_schemas` store + `todo` JSON Schema validation
 - ACL rules for the `$unauthenticated` role (see [Security model](#security-model))
 
 ### 4. Configure the frontend
 
-Create the file `src/environments/environment.prod.ts` with your instance URL:
+Create `src/environments/environment.prod.ts` with your instance URL:
 
 ```typescript
 export const environment = {
@@ -78,66 +85,72 @@ export const environment = {
 };
 ```
 
-> `environment.prod.ts` is excluded from git (`.gitignore`) so your URL stays private.
+> This file is listed in `.gitignore` — your URL stays private.
 
-### 5. Run the app
+For local development, edit `src/environments/environment.ts` instead.
+
+### 5. Run
 
 ```bash
 ng serve
 ```
 
-Open `http://localhost:4200`.
+Open **http://localhost:4200**.
 
-On first visit you will be prompted to **create a group** (generates a shareable 8-character code) or **join an existing group** by entering a code. Share the code with your team — anyone with it can access the same board. The code is stored in `localStorage`; use **Export backup** to save your group codes and restore them on another device.
+On first visit, create a group (generates a shareable 8-character code) or join one with an existing code. Share the code with your team — anyone who has it can access the same board. Use **Export backup** on the home screen to save your group codes and restore them on another device.
+
+---
 
 ## Security model
 
-The app uses **no HTTP authentication**. Security is enforced entirely by RESTHeart's ACL on the server side, using the `groupId` query parameter as the access key.
+The app sends **no credentials**. Access control is enforced entirely on the server by RESTHeart ACL.
 
-### How it works
-
-Every request from the Angular frontend includes `?groupId=<code>` (e.g. `GET /todos?groupId=AB3X9KQZ`). The RESTHeart ACL rules are configured as follows:
+Every request includes `?groupId=<code>`. The ACL rules for both `/todos` and `/swimlanes` are:
 
 | Property | Value |
 |---|---|
-| Role | `$unauthenticated` (no login required) |
+| Role | `$unauthenticated` |
 | Predicate | `path-prefix("/todos") and qparams-contain(groupId)` |
 | `readFilter` | `{"groupId": "@qparams['groupId']"}` |
 | `writeFilter` | `{"groupId": "@qparams['groupId']"}` |
 | `mergeRequest` | `{"groupId": "@qparams['groupId']"}` |
 
-- **`qparams-contain(groupId)`** — requests without a `groupId` param are rejected (403).
-- **`readFilter`** — MongoDB filter automatically applied to every read; users can only see documents belonging to their group.
-- **`writeFilter`** — same constraint applied to writes; users cannot modify documents from other groups.
-- **`mergeRequest`** — the `groupId` field is automatically injected into every created document, so the client never needs to send it explicitly.
+- Requests **without** `groupId` are rejected (403).
+- `readFilter` / `writeFilter` scope every read and write to the caller's group.
+- `mergeRequest` auto-injects `groupId` into every new document — the client never sends it explicitly.
 
-The group code is the shared secret. Anyone who knows it can read and write that group's data — it is intentionally simple and suitable for low-stakes collaboration.
+The group code is the shared secret. It is intentionally simple and suited for low-stakes team collaboration.
+
+---
 
 ## Project structure
 
 ```
-src/app/
-  group.service.ts      ← group code management (localStorage)
-  todo.service.ts       ← CRUD for todos (RESTHeart REST API)
-  swimlane.service.ts   ← CRUD for swimlanes
-  app.ts                ← Kanban board component
-  app.html              ← template
-  app.css               ← dark theme styles
+src/
+  app/
+    app.ts                 ← Kanban board component
+    app.html               ← template
+    app.css                ← dark theme styles
+    todo.service.ts        ← CRUD for tasks
+    swimlane.service.ts    ← CRUD for swimlanes
+    group.service.ts       ← group code · backup · restore
+  environments/
+    environment.ts         ← dev (localhost)
+    environment.prod.ts    ← production URL (git-ignored)
 scripts/
-  init-backend.sh       ← backend initialization script
+  init-backend.sh          ← one-shot backend setup
 ```
 
-## Development server
+---
 
-```bash
-ng serve
-```
+## How it was built
 
-## Build
+This application was written entirely with **[Claude Code](https://claude.ai/code)** (Anthropic) — no code was written manually.
 
-```bash
-ng build
-```
+- The **Angular frontend** was scaffolded and developed through a conversation with Claude Code, which wrote all components, services, drag & drop logic, and styles.
+- The **RESTHeart Cloud backend** was configured using the **Sophia MCP server** — an MCP tool that gives Claude Code direct access to the RESTHeart documentation. This allowed Claude to autonomously set up collections, JSON Schema validation, and ACL rules by querying the docs and running `httpie` commands.
+
+---
 
 ## License
 

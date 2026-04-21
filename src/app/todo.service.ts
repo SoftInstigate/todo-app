@@ -48,7 +48,7 @@ export class TodoService {
     }, { headers: HEADERS, params: { groupId: this.groupId } });
   }
 
-  update(todo: Todo, patch: { status?: Status; swimlaneId?: string }) {
+  update(todo: Todo, patch: { title?: string; notes?: string; tags?: string[]; assignees?: string[]; status?: Status; swimlaneId?: string }) {
     const id = todo._id!.$oid;
     const $set: any = { ...patch };
     const body: any = { $set };
@@ -61,10 +61,6 @@ export class TodoService {
       headers: HEADERS,
       params: { groupId: this.groupId },
     });
-  }
-
-  setStatus(todo: Todo, status: Status) {
-    return this.update(todo, { status });
   }
 
   delete(todo: Todo) {

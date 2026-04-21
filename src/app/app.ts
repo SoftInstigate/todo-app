@@ -34,6 +34,12 @@ export class App implements OnInit {
   renamingGroup = false;
   renameGroupValue = '';
 
+  // task detail panel
+  selectedTodo = signal<Todo | null>(null);
+  editForm = { title: '', notes: '', tags: '', swimlaneId: '', status: 'open' as Status };
+  editAssignees: string[] = [];
+  editPendingAssignee = '';
+
   readonly statuses: Status[] = ['open', 'in-progress', 'blocked', 'closed'];
   readonly statusLabels: Record<Status, string> = {
     'open': 'Open', 'in-progress': 'In Progress', 'blocked': 'Blocked', 'closed': 'Closed',
@@ -77,6 +83,8 @@ export class App implements OnInit {
     });
   }
 
+  // ── Group ────────────────────────────────────────────────────────────────────
+
   createGroup() {
     const name = this.newGroupName.trim() || 'New group';
     const code = this.groupSvc.create(name);
@@ -111,6 +119,7 @@ export class App implements OnInit {
     this.swimlanes.set([]);
     this.justCreatedCode = null;
     this.form.swimlaneId = '';
+    this.selectedTodo.set(null);
   }
 
   copyCode() {
@@ -138,6 +147,65 @@ export class App implements OnInit {
     reader.readAsText(file);
     (event.target as HTMLInputElement).value = '';
   }
+
+  // ── Task panel ───────────────────────────────────────────────────────────────
+
+  openTask(todo: Todo, event: MouseEvent) {
+    event.stopPropagation();
+    if (this.selectedTodo()?._id?.$oid === todo._id?.$oid) {
+      this.selectedTodo.set(null);
+      return;
+    }
+    this.editForm = {
+      title:      todo.title,
+      notes:      todo.notes ?? '',
+      tags:       (todo.tags ?? []).join(', '),
+      swimlaneId: todo.swimlaneId ?? this.swimlanes()[0]?._id?.$oid ?? '',
+      status:     todo.status,
+    };
+    this.editAssignees = [...(todo.assignees ?? [])];
+    this.editPendingAssignee = '';
+    this.selectedTodo.set(todo);
+  }
+
+  closeTask() { this.selectedTodo.set(null); }
+
+  saveTask() {
+    const todo = this.selectedTodo();
+    if (!todo || !this.editForm.title.trim()) return;
+    if (this.editPendingAssignee.trim()) this.addEditAssignee(this.editPendingAssignee);
+    const tags = this.editForm.tags.split(',').map(t => t.trim()).filter(Boolean);
+    this.todoSvc.update(todo, {
+      title:      this.editForm.title.trim(),
+      notes:      this.editForm.notes.trim(),
+      tags,
+      assignees:  [...this.editAssignees],
+      status:     this.editForm.status,
+      swimlaneId: this.editForm.swimlaneId,
+    }).subscribe(() => {
+      this.selectedTodo.set(null);
+      this.todoSvc.getAll().subscribe(t => this.todos.set(t));
+    });
+  }
+
+  addEditAssignee(name: string) {
+    const n = name.trim();
+    if (n && !this.editAssignees.includes(n)) this.editAssignees.push(n);
+    this.editPendingAssignee = '';
+  }
+
+  onEditAssigneeKey(event: KeyboardEvent) {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      this.addEditAssignee(this.editPendingAssignee);
+    }
+  }
+
+  removeEditAssignee(name: string) {
+    this.editAssignees = this.editAssignees.filter(a => a !== name);
+  }
+
+  // ── Board ────────────────────────────────────────────────────────────────────
 
   getCards(laneId: string, status: Status): Todo[] {
     const fallbackId = this.swimlanes()[0]?._id?.$oid;
@@ -226,6 +294,7 @@ export class App implements OnInit {
   cancelDelete() { this.confirmingId = null; }
   confirmDelete(todo: Todo) {
     this.confirmingId = null;
+    if (this.selectedTodo()?._id?.$oid === todo._id?.$oid) this.selectedTodo.set(null);
     this.todoSvc.delete(todo).subscribe(() =>
       this.todoSvc.getAll().subscribe(t => this.todos.set(t))
     );
@@ -237,6 +306,6 @@ export class App implements OnInit {
 
   formatDate(d?: { $date: number }) {
     if (!d) return '';
-    return new Date(d.$date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+    return new Date(d.$date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 }

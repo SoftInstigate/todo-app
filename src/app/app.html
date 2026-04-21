@@ -48,6 +48,73 @@
   </div>
 }
 
+<!-- ── Task panel ── -->
+@if (selectedTodo()) {
+  <aside class="task-panel" (keydown.escape)="closeTask()">
+    <div class="task-panel-header">
+      <span class="task-panel-label">Edit task</span>
+      <button class="task-panel-close" (click)="closeTask()">✕</button>
+    </div>
+    <div class="task-panel-body">
+
+      <label class="field-label">Title</label>
+      <input class="panel-input" [(ngModel)]="editForm.title" name="editTitle" placeholder="Title" />
+
+      <label class="field-label">Status</label>
+      <select class="panel-input" [(ngModel)]="editForm.status" name="editStatus">
+        @for (s of statuses; track s) {
+          <option [value]="s">{{ statusLabels[s] }}</option>
+        }
+      </select>
+
+      <label class="field-label">Swimlane</label>
+      <select class="panel-input" [(ngModel)]="editForm.swimlaneId" name="editSwimlane">
+        @for (lane of swimlanes(); track lane._id?.$oid) {
+          <option [value]="lane._id!.$oid">{{ lane.name }}</option>
+        }
+      </select>
+
+      <label class="field-label">Assignees</label>
+      <div class="assignees-chips">
+        @for (a of editAssignees; track a) {
+          <span class="assignee-chip">
+            <span class="avatar-sm">{{ initials(a) }}</span>
+            {{ a }}
+            <button type="button" (click)="removeEditAssignee(a)">✕</button>
+          </span>
+        }
+      </div>
+      <input class="panel-input" [(ngModel)]="editPendingAssignee" name="editAssignee"
+             placeholder="Add assignee… (Enter)"
+             list="edit-assignee-suggestions"
+             (keydown)="onEditAssigneeKey($event)"
+             autocomplete="off" />
+      <datalist id="edit-assignee-suggestions">
+        @for (name of allAssignees(); track name) {
+          <option [value]="name"></option>
+        }
+      </datalist>
+
+      <label class="field-label">Tags</label>
+      <input class="panel-input" [(ngModel)]="editForm.tags" name="editTags" placeholder="work, urgent" />
+
+      <label class="field-label">Notes</label>
+      <textarea class="panel-input" [(ngModel)]="editForm.notes" name="editNotes" rows="4" placeholder="Notes"></textarea>
+
+      <div class="task-panel-dates">
+        <span>Created: {{ formatDate(selectedTodo()!.createdAt) }}</span>
+        @if (selectedTodo()!.closedAt) {
+          <span>Closed: {{ formatDate(selectedTodo()!.closedAt) }}</span>
+        }
+      </div>
+    </div>
+    <div class="task-panel-footer">
+      <button class="btn-primary" (click)="saveTask()">Save</button>
+      <button class="btn-confirm-no" (click)="closeTask()">Cancel</button>
+    </div>
+  </aside>
+}
+
 <!-- ── Board ── -->
 @if (groupSvc.code()) {
   <div class="board-wrapper">
@@ -168,7 +235,10 @@
                    class="kanban-cell">
 
                 @for (todo of getCards(lane._id!.$oid, status); track todo._id?.$oid) {
-                  <div cdkDrag [cdkDragData]="todo" class="todo-card">
+                  <div cdkDrag [cdkDragData]="todo"
+                       class="todo-card"
+                       [class.todo-card--selected]="selectedTodo()?._id?.$oid === todo._id?.$oid"
+                       (click)="openTask(todo, $event)">
                     <div class="card-title">{{ todo.title }}</div>
                     @if (todo.notes) {
                       <p class="card-notes">{{ todo.notes }}</p>
@@ -191,11 +261,11 @@
                       <span class="card-date">{{ formatDate(todo.createdAt) }}</span>
                       @if (confirmingId === todo._id?.$oid) {
                         <span class="confirm-delete">
-                          <button class="btn-confirm-yes" (click)="confirmDelete(todo)">Delete</button>
-                          <button class="btn-confirm-no" (click)="cancelDelete()">No</button>
+                          <button class="btn-confirm-yes" (click)="confirmDelete(todo); $event.stopPropagation()">Delete</button>
+                          <button class="btn-confirm-no" (click)="cancelDelete(); $event.stopPropagation()">No</button>
                         </span>
                       } @else {
-                        <button class="btn-delete-card" (click)="askDelete(todo)">✕</button>
+                        <button class="btn-delete-card" (click)="askDelete(todo); $event.stopPropagation()">✕</button>
                       }
                     </div>
                     <div *cdkDragPlaceholder class="card-placeholder"></div>

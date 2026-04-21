@@ -1,10 +1,12 @@
-import { Component, inject, signal, computed, OnInit, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, effect, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { forkJoin } from 'rxjs';
+import { forkJoin, debounceTime, filter } from 'rxjs';
 import { TodoService, Todo, Status } from './todo.service';
 import { SwimlaneService, Swimlane } from './swimlane.service';
 import { GroupService } from './group.service';
+import { RealtimeService } from './realtime.service';
 
 @Component({
   selector: 'app-root',
@@ -13,9 +15,11 @@ import { GroupService } from './group.service';
   styleUrl: './app.css',
 })
 export class App implements OnInit {
-  private todoSvc = inject(TodoService);
-  private laneSvc = inject(SwimlaneService);
-  readonly groupSvc = inject(GroupService);
+  private todoSvc    = inject(TodoService);
+  private laneSvc    = inject(SwimlaneService);
+  private destroyRef = inject(DestroyRef);
+  readonly groupSvc     = inject(GroupService);
+  readonly realtimeSvc  = inject(RealtimeService);
 
   todos      = signal<Todo[]>([]);
   swimlanes  = signal<Swimlane[]>([]);
@@ -67,12 +71,30 @@ export class App implements OnInit {
 
   constructor() {
     effect(() => {
-      // reload when showForgotten changes, but only if a group is active
       this.showForgotten();
       if (this.groupSvc.code()) {
         this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t));
       }
     });
+
+    // Delete events: remove locally by _id — safe even if cross-group (id won't match)
+    this.realtimeSvc.changes
+      .pipe(filter(e => e.op === 'delete'), takeUntilDestroyed(this.destroyRef))
+      .subscribe(e => {
+        if (e.op === 'delete') this.todos.update(ts => ts.filter(t => t._id?.$oid !== e.id));
+      });
+
+    // Upsert events: debounce + reload
+    this.realtimeSvc.changes
+      .pipe(filter(e => e.op === 'upsert'), debounceTime(500), takeUntilDestroyed(this.destroyRef))
+      .subscribe(e => {
+        if (!this.groupSvc.code()) return;
+        if (e.op === 'upsert' && e.target === 'todos') {
+          this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t));
+        } else {
+          this.laneSvc.getAll().subscribe(l => this.swimlanes.set(l));
+        }
+      });
   }
 
   ngOnInit() {
@@ -80,6 +102,7 @@ export class App implements OnInit {
   }
 
   loadAll() {
+    this.realtimeSvc.connect(this.groupSvc.code()!);
     this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t));
     this.laneSvc.getAll().subscribe(lanes => {
       if (lanes.length === 0) {
@@ -127,6 +150,7 @@ export class App implements OnInit {
   }
 
   leaveGroup() {
+    this.realtimeSvc.disconnect();
     this.groupSvc.leave();
     this.todos.set([]);
     this.swimlanes.set([]);

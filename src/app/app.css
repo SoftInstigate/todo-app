@@ -164,6 +164,20 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
 
 .header-right { display: flex; align-items: center; gap: 10px; }
 
+.live-dot {
+  font-size: 0.6rem;
+  color: var(--border2);
+  transition: color 0.4s;
+}
+.live-dot--on {
+  color: var(--green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
 .group-pill {
   display: flex;
   align-items: center;

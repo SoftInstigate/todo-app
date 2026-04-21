@@ -18,6 +18,7 @@
 | 🖱 **Drag & drop** | Move cards across columns and reorder swimlanes |
 | 👥 **Group codes** | Share an 8-char code with your team — no login required |
 | 🔒 **Server-side isolation** | RESTHeart ACL ensures each group sees only its own data |
+| ⚡ **Real-time updates** | Live sync via WebSocket change streams — changes by teammates appear instantly |
 | 🙋 **Assignees** | Autocomplete from names already used in the group |
 | 🏷 **Tags & notes** | Attach metadata to every task |
 | 💾 **Backup / restore** | Export and import your group codes as JSON |
@@ -32,7 +33,8 @@
 |---|---|
 | Frontend | Angular 21 (standalone components, signals) |
 | Drag & drop | `@angular/cdk/drag-drop` |
-| Backend | [RESTHeart Cloud](https://cloud.restheart.org) — managed REST API on MongoDB |
+| Backend | [RESTHeart Cloud](https://cloud.restheart.org) — managed REST + WebSocket API on MongoDB |
+| Real-time | RESTHeart Change Streams over WebSocket |
 | Styling | CSS custom properties · Inter font |
 
 ---
@@ -101,6 +103,37 @@ On first visit, create a group (generates a shareable 8-character code) or join 
 
 ---
 
+## Real-time collaboration
+
+The board stays in sync across all open browsers without polling. When any teammate creates, updates, or moves a task, everyone else sees the change within milliseconds.
+
+This works entirely through **RESTHeart Change Streams** — a WebSocket API backed by MongoDB Change Streams. The app opens two persistent connections on load, one for `todos` and one for `swimlanes`:
+
+```
+wss://your-instance.restheart.com/todos/_streams/changes?groupId=X&avars={"groupId":"X"}
+wss://your-instance.restheart.com/swimlanes/_streams/changes?groupId=X&avars={"groupId":"X"}
+```
+
+The stream is **filtered server-side**. The change stream stage uses a `$var` reference so the server only pushes events that belong to the caller's group:
+
+```json
+{ "$match": { "$or": [
+  { "operationType": "delete" },
+  { "fullDocument::groupId": { "$var": "groupId" } }
+]}}
+```
+
+`$var: groupId` is resolved at runtime from the `avars` query parameter — no unfiltered events ever leave the server. A dedicated ACL rule (priority 110) gates access to the stream endpoints:
+
+```
+(path-prefix("/todos/_streams") or path-prefix("/swimlanes/_streams"))
+  and qparams-contain(avars.groupId)
+```
+
+On the Angular side, a `RealtimeService` manages the sockets, debounces rapid bursts (500 ms), auto-reconnects on unexpected close, and exposes a `connected` signal that drives the live indicator (●) in the header.
+
+---
+
 ## Security model
 
 The app sends **no credentials**. Access control is enforced entirely on the server by RESTHeart ACL.
@@ -134,6 +167,7 @@ src/
     todo.service.ts        ← CRUD for tasks
     swimlane.service.ts    ← CRUD for swimlanes
     group.service.ts       ← group code · backup · restore
+    realtime.service.ts    ← WebSocket change streams · auto-reconnect
   environments/
     environment.ts         ← dev (localhost)
     environment.prod.ts    ← production URL (git-ignored)

@@ -121,6 +121,7 @@
     <header class="board-header">
       <h1>Todo Board</h1>
       <div class="header-right">
+        <span class="live-dot" [class.live-dot--on]="realtimeSvc.connected()" title="{{ realtimeSvc.connected() ? 'Live' : 'Connecting…' }}">●</span>
         <div class="group-pill">
           @if (renamingGroup) {
             <input class="group-name-input"

@@ -94,7 +94,7 @@ echo "4. Creating ACL rules for role '\$unauthenticated'..."
 
 MONGO_FILTER='{"readFilter":{"groupId":"@qparams['"'"'groupId'"'"']"},"writeFilter":{"groupId":"@qparams['"'"'groupId'"'"']"},"mergeRequest":{"groupId":"@qparams['"'"'groupId'"'"']"}}'
 
-STATUS=$(http --ignore-stdin PUT "$URL/acl/todoUserCRUD" -a "$AUTH" \
+STATUS=$(http --ignore-stdin PUT "$URL/acl/todoUserCRUD?wm=upsert" -a "$AUTH" \
   roles:='["$unauthenticated"]' \
   predicate='path-prefix("/todos") and qparams-contain(groupId)' \
   priority:=100 \
@@ -102,13 +102,32 @@ STATUS=$(http --ignore-stdin PUT "$URL/acl/todoUserCRUD" -a "$AUTH" \
   -v 2>&1 | grep "^HTTP/" | awk '{print $2}')
 check "ACL todos" "$STATUS"
 
-STATUS=$(http --ignore-stdin PUT "$URL/acl/todoUserSwimlanes" -a "$AUTH" \
+STATUS=$(http --ignore-stdin PUT "$URL/acl/todoUserSwimlanes?wm=upsert" -a "$AUTH" \
   roles:='["$unauthenticated"]' \
   predicate='path-prefix("/swimlanes") and qparams-contain(groupId)' \
   priority:=100 \
   mongo:="$MONGO_FILTER" \
   -v 2>&1 | grep "^HTTP/" | awk '{print $2}')
 check "ACL swimlanes" "$STATUS"
+
+STATUS=$(http --ignore-stdin PUT "$URL/acl/todoUserStreams?wm=upsert" -a "$AUTH" \
+  roles:='["$unauthenticated"]' \
+  predicate='(path-prefix("/todos/_streams") or path-prefix("/swimlanes/_streams")) and qparams-contain(avars.groupId)' \
+  priority:=110 \
+  -v 2>&1 | grep "^HTTP/" | awk '{print $2}')
+check "ACL streams" "$STATUS"
+
+# ── 5. Change streams ─────────────────────────────────────────────────────────
+echo ""
+echo "5. Creating change streams..."
+
+STREAM='[{"uri":"changes","stages":[{"$match":{"$or":[{"operationType":"delete"},{"fullDocument::groupId":{"$var":"groupId"}}]}}]}]'
+
+STATUS=$(http --ignore-stdin PATCH "$URL/todos"     -a "$AUTH" streams:="$STREAM" -v 2>&1 | grep "^HTTP/" | awk '{print $2}')
+check "todos change stream" "$STATUS"
+
+STATUS=$(http --ignore-stdin PATCH "$URL/swimlanes" -a "$AUTH" streams:="$STREAM" -v 2>&1 | grep "^HTTP/" | awk '{print $2}')
+check "swimlanes change stream" "$STATUS"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""

@@ -446,6 +446,8 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
 .kanban-cell {
   padding: 8px;
   min-height: 80px;
+  min-width: 0;
+  overflow: hidden;
   border-right: 1px solid var(--border);
   transition: background 0.15s;
 }
@@ -461,6 +463,9 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
   padding: 10px 12px;
   margin-bottom: 6px;
   cursor: grab;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 .todo-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.4); border-color: var(--border2); }
@@ -485,7 +490,10 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
 }
 
 .card-title { font-size: 0.88rem; font-weight: 500; color: var(--text); margin-bottom: 4px; }
-.card-notes { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; line-height: 1.4; }
+.card-notes {
+  font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
 
 .card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
 .tag {

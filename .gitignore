@@ -45,3 +45,6 @@ Thumbs.db
 
 # Deployment
 scripts/deploy.sh
+
+# Environment secrets
+src/environments/environment.prod.ts

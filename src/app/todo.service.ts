@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { GroupService } from './group.service';
+import { environment } from '../environments/environment';
 
-const BASE = 'https://acac36.eu-central-1-free-1.restheart.com/todos';
+const BASE = `${environment.restheartUrl}/todos`;
 const HEADERS = new HttpHeaders({ 'Content-Type': 'application/json' });
 
 export type Status = 'open' | 'in-progress' | 'blocked' | 'closed';

@@ -33,53 +33,62 @@ No code was written manually.
 | Backend | [RESTHeart Cloud](https://cloud.restheart.org) (managed REST API on MongoDB) |
 | Styling | CSS custom properties, Inter font |
 
-## Configuration
+## Getting started
 
-### 1. Provision a RESTHeart Cloud instance
-
-Sign up at [cloud.restheart.org](https://cloud.restheart.org) and create a free instance. Note your instance URL and root credentials.
-
-### 2. Initialize the backend
-
-Run the provided script with your instance URL and root credentials:
+### 1. Clone the repository
 
 ```bash
-./scripts/init-backend.sh <restheart-url> <root-user> <root-password>
+git clone https://github.com/SoftInstigate/todo-app.git
+cd todo-app
+npm install
+```
+
+### 2. Create a RESTHeart Cloud account
+
+1. Go to [cloud.restheart.org](https://cloud.restheart.org) and sign up for a free account.
+2. Create a new instance. Once provisioned, open the instance dashboard.
+3. Copy the **Instance URL** — it looks like `https://xxxx.eu-central-1-free-1.restheart.com`. You will need it in the next steps.
+4. Note the **root password** you set during provisioning (or find it in the dashboard under *Credentials*).
+
+### 3. Initialize the backend
+
+Run the initialization script with your instance URL and root credentials. It requires [HTTPie](https://httpie.io) (`brew install httpie`).
+
+```bash
+./scripts/init-backend.sh <instance-url> <root-user> <root-password>
 ```
 
 **Example:**
 ```bash
-./scripts/init-backend.sh https://xyz.eu-central-1-free-1.restheart.com root mypassword
+./scripts/init-backend.sh https://xxxx.eu-central-1-free-1.restheart.com root mypassword
 ```
 
-The script will:
-- Create the `todos` and `swimlanes` collections
-- Create the `_schemas` store and register the `todo` JSON Schema
-- Apply schema validation to the `todos` collection
-- Create ACL rules for the `$unauthenticated` role (see [Security model](#security-model) below)
+The script creates:
+- `todos` and `swimlanes` collections
+- `_schemas` store with the `todo` JSON Schema
+- ACL rules for the `$unauthenticated` role (see [Security model](#security-model))
 
-### 3. Configure the Angular app
+### 4. Configure the frontend
 
-Update the two service files with your instance URL:
-
-**`src/app/todo.service.ts`** and **`src/app/swimlane.service.ts`**:
+Create the file `src/environments/environment.prod.ts` with your instance URL:
 
 ```typescript
-const BASE = 'https://<your-instance>.restheart.com/todos';   // or /swimlanes
+export const environment = {
+  restheartUrl: 'https://xxxx.eu-central-1-free-1.restheart.com',
+};
 ```
 
-No credentials needed — access is controlled via the `groupId` query parameter.
+> `environment.prod.ts` is excluded from git (`.gitignore`) so your URL stays private.
 
-### 4. Run the app
+### 5. Run the app
 
 ```bash
-npm install
 ng serve
 ```
 
 Open `http://localhost:4200`.
 
-On first visit you will be prompted to **create a group** (generates a shareable 8-character code) or **join an existing group** by entering a code. The code is stored in `localStorage` — share it with your team so everyone accesses the same board.
+On first visit you will be prompted to **create a group** (generates a shareable 8-character code) or **join an existing group** by entering a code. Share the code with your team — anyone with it can access the same board. The code is stored in `localStorage`; use **Export backup** to save your group codes and restore them on another device.
 
 ## Security model
 

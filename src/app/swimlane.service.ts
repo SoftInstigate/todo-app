@@ -2,8 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { GroupService } from './group.service';
+import { environment } from '../environments/environment';
 
-const BASE = 'https://acac36.eu-central-1-free-1.restheart.com/swimlanes';
+const BASE = `${environment.restheartUrl}/swimlanes`;
 const HEADERS = new HttpHeaders({ 'Content-Type': 'application/json' });
 
 export interface Swimlane {

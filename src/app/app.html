@@ -1,0 +1,182 @@
+<!-- ── Group screen ── -->
+@if (!groupSvc.code()) {
+  <div class="group-screen">
+    <div class="group-card">
+      <h1>Todo Board</h1>
+      <p class="group-subtitle">Crea un gruppo o unisciti con un codice.</p>
+
+      <button class="btn-primary btn-block" (click)="createGroup()">Crea nuovo gruppo</button>
+
+      <div class="divider">oppure</div>
+
+      <form class="join-form" (ngSubmit)="joinGroup()">
+        <input [(ngModel)]="newGroupCode" name="code"
+               placeholder="Inserisci codice (es. ABCD1234)"
+               maxlength="8" autocomplete="off" />
+        <button type="submit" class="btn-primary">Unisciti</button>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ── Board ── -->
+@if (groupSvc.code()) {
+  <div class="board-wrapper">
+    <header class="board-header">
+      <h1>Todo Board</h1>
+      <div class="header-right">
+        <div class="group-code-pill" (click)="copyCode()" title="Clicca per copiare">
+          <span class="code-label">Codice:</span>
+          <span class="code-value">{{ groupSvc.code() }}</span>
+          <span class="code-copy">{{ copied ? '✓' : '📋' }}</span>
+        </div>
+        <button class="btn-primary" (click)="showForm.set(!showForm())">
+          {{ showForm() ? '✕ Chiudi' : '+ Nuovo task' }}
+        </button>
+        <button class="btn-leave" (click)="leaveGroup()" title="Cambia gruppo">⇠</button>
+      </div>
+    </header>
+
+    @if (justCreatedCode) {
+      <div class="new-group-banner">
+        Gruppo creato! Condividi il codice <strong>{{ justCreatedCode }}</strong> con il tuo team.
+        <button (click)="justCreatedCode = null">✕</button>
+      </div>
+    }
+
+    @if (showForm()) {
+      <form class="new-form" (ngSubmit)="addTodo()">
+        <input [(ngModel)]="form.title" name="title" placeholder="Titolo *" required />
+        <textarea [(ngModel)]="form.notes" name="notes" placeholder="Note" rows="2"></textarea>
+        <input [(ngModel)]="form.tags" name="tags" placeholder="Tag (es. lavoro, urgente)" />
+        <select [(ngModel)]="form.swimlaneId" name="swimlaneId">
+          @for (lane of swimlanes(); track lane._id?.$oid) {
+            <option [value]="lane._id!.$oid">{{ lane.name }}</option>
+          }
+        </select>
+
+        <!-- Assignees -->
+        <div class="assignees-field">
+          <div class="assignees-chips">
+            @for (a of formAssignees; track a) {
+              <span class="assignee-chip">
+                <span class="avatar-sm">{{ initials(a) }}</span>
+                {{ a }}
+                <button type="button" (click)="removeAssignee(a)">✕</button>
+              </span>
+            }
+          </div>
+          <div class="assignee-input-row">
+            <input [(ngModel)]="pendingAssignee" name="assignee"
+                   placeholder="Assegna a… (Enter per aggiungere)"
+                   list="assignee-suggestions"
+                   (keydown)="onAssigneeKey($event)"
+                   autocomplete="off" />
+            <datalist id="assignee-suggestions">
+              @for (name of allAssignees(); track name) {
+                <option [value]="name"></option>
+              }
+            </datalist>
+          </div>
+        </div>
+
+        <button type="submit">Aggiungi</button>
+      </form>
+    }
+
+    <div class="kanban-board">
+      <div class="col-headers">
+        <div class="lane-spacer"></div>
+        @for (s of statuses; track s) {
+          <div class="col-header col-{{ s }}">{{ statusLabels[s] }}</div>
+        }
+      </div>
+
+      <div cdkDropList
+           cdkDropListOrientation="vertical"
+           [cdkDropListData]="swimlanes()"
+           (cdkDropListDropped)="onLaneDrop($event)"
+           class="lanes-container">
+
+        @for (lane of swimlanes(); track lane._id?.$oid) {
+          <div cdkDrag [cdkDragData]="lane" class="swimlane-row">
+            <div class="lane-header" cdkDragHandle>
+              <span class="drag-icon">⠿</span>
+              @if (renamingId === lane._id?.$oid) {
+                <input class="lane-rename-input"
+                       [(ngModel)]="renameValue"
+                       name="rename-{{ lane._id?.$oid }}"
+                       (blur)="commitRename(lane)"
+                       (keydown.enter)="commitRename(lane)"
+                       (keydown.escape)="renamingId = null"
+                       (click)="$event.stopPropagation()"
+                       autofocus />
+              } @else {
+                <span class="lane-name" (dblclick)="startRename(lane)" title="Doppio click per rinominare">{{ lane.name }}</span>
+              }
+              <button class="btn-icon" (click)="deleteLane(lane)" title="Elimina swimlane">✕</button>
+            </div>
+
+            @for (status of statuses; track status) {
+              <div cdkDropList
+                   [id]="'cell-' + lane._id!.$oid + '-' + status"
+                   [cdkDropListData]="{ laneId: lane._id!.$oid, status: status }"
+                   [cdkDropListConnectedTo]="allCardListIds()"
+                   (cdkDropListDropped)="onCardDrop($event)"
+                   class="kanban-cell">
+
+                @for (todo of getCards(lane._id!.$oid, status); track todo._id?.$oid) {
+                  <div cdkDrag [cdkDragData]="todo" class="todo-card">
+                    <div class="card-title">{{ todo.title }}</div>
+                    @if (todo.notes) {
+                      <p class="card-notes">{{ todo.notes }}</p>
+                    }
+                    @if (todo.tags?.length) {
+                      <div class="card-tags">
+                        @for (tag of todo.tags; track tag) {
+                          <span class="tag">{{ tag }}</span>
+                        }
+                      </div>
+                    }
+                    @if (todo.assignees?.length) {
+                      <div class="card-assignees">
+                        @for (a of todo.assignees; track a) {
+                          <span class="avatar" [title]="a">{{ initials(a) }}</span>
+                        }
+                      </div>
+                    }
+                    <div class="card-footer">
+                      <span class="card-date">{{ formatDate(todo.createdAt) }}</span>
+                      @if (confirmingId === todo._id?.$oid) {
+                        <span class="confirm-delete">
+                          <button class="btn-confirm-yes" (click)="confirmDelete(todo)">Elimina</button>
+                          <button class="btn-confirm-no" (click)="cancelDelete()">No</button>
+                        </span>
+                      } @else {
+                        <button class="btn-delete-card" (click)="askDelete(todo)">✕</button>
+                      }
+                    </div>
+                    <div *cdkDragPlaceholder class="card-placeholder"></div>
+                  </div>
+                }
+              </div>
+            }
+            <div *cdkDragPlaceholder class="lane-placeholder"></div>
+          </div>
+        }
+      </div>
+
+      <div class="add-lane">
+        @if (showLaneForm) {
+          <form class="lane-form" (ngSubmit)="addLane()">
+            <input [(ngModel)]="newLaneName" name="laneName" placeholder="Nome swimlane" autofocus />
+            <button type="submit">Aggiungi</button>
+            <button type="button" (click)="showLaneForm = false">Annulla</button>
+          </form>
+        } @else {
+          <button class="btn-add-lane" (click)="showLaneForm = true">+ Swimlane</button>
+        }
+      </div>
+    </div>
+  </div>
+}

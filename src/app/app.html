@@ -3,18 +3,47 @@
   <div class="group-screen">
     <div class="group-card">
       <h1>Todo Board</h1>
-      <p class="group-subtitle">Crea un gruppo o unisciti con un codice.</p>
+      <p class="group-subtitle">Select a group or create a new one.</p>
 
-      <button class="btn-primary btn-block" (click)="createGroup()">Crea nuovo gruppo</button>
+      @if (groupSvc.savedGroups().length) {
+        <div class="saved-groups">
+          @for (g of groupSvc.savedGroups(); track g.code) {
+            <div class="saved-group-item" (click)="switchGroup(g.code)">
+              <span class="saved-group-name">{{ g.name }}</span>
+              <span class="saved-group-code">{{ g.code }}</span>
+            </div>
+          }
+        </div>
+        <div class="divider">or</div>
+      }
 
-      <div class="divider">oppure</div>
+      <form class="create-form" (ngSubmit)="createGroup()">
+        <input [(ngModel)]="newGroupName" name="groupName" placeholder="Group name (optional)" />
+        <button type="submit" class="btn-primary btn-block">+ Create new group</button>
+      </form>
+
+      <div class="divider">join with a code</div>
 
       <form class="join-form" (ngSubmit)="joinGroup()">
         <input [(ngModel)]="newGroupCode" name="code"
-               placeholder="Inserisci codice (es. ABCD1234)"
+               placeholder="Enter code (e.g. ABCD1234)"
                maxlength="8" autocomplete="off" />
-        <button type="submit" class="btn-primary">Unisciti</button>
+        <button type="submit" class="btn-primary">Join</button>
       </form>
+
+      <div class="group-notice">
+        <p>⚠️ Losing your code means losing your tasks. Saved groups are local to this browser — use backup to transfer them to another device.</p>
+      </div>
+
+      <div class="backup-actions">
+        @if (groupSvc.savedGroups().length) {
+          <button class="btn-backup" (click)="groupSvc.exportBackup()">↓ Export backup</button>
+        }
+        <label class="btn-backup">
+          ↑ Import backup
+          <input type="file" accept=".json" (change)="importBackup($event)" hidden />
+        </label>
+      </div>
     </div>
   </div>
 }
@@ -25,37 +54,50 @@
     <header class="board-header">
       <h1>Todo Board</h1>
       <div class="header-right">
-        <div class="group-code-pill" (click)="copyCode()" title="Clicca per copiare">
-          <span class="code-label">Codice:</span>
-          <span class="code-value">{{ groupSvc.code() }}</span>
-          <span class="code-copy">{{ copied ? '✓' : '📋' }}</span>
+        <div class="group-pill">
+          @if (renamingGroup) {
+            <input class="group-name-input"
+                   [(ngModel)]="renameGroupValue"
+                   name="groupRename"
+                   (blur)="commitGroupRename()"
+                   (keydown.enter)="commitGroupRename()"
+                   (keydown.escape)="renamingGroup = false"
+                   autofocus />
+          } @else {
+            <span class="group-name" (dblclick)="startGroupRename()" title="Double-click to rename">
+              {{ groupSvc.activeGroup()?.name ?? groupSvc.code() }}
+            </span>
+          }
+          <span class="group-sep">·</span>
+          <span class="group-code-value" (click)="copyCode()" title="Click to copy">
+            {{ groupSvc.code() }} {{ copied ? '✓' : '📋' }}
+          </span>
         </div>
         <button class="btn-primary" (click)="showForm.set(!showForm())">
-          {{ showForm() ? '✕ Chiudi' : '+ Nuovo task' }}
+          {{ showForm() ? '✕ Close' : '+ New task' }}
         </button>
-        <button class="btn-leave" (click)="leaveGroup()" title="Cambia gruppo">⇠</button>
+        <button class="btn-leave" (click)="leaveGroup()" title="Switch group">⇠</button>
       </div>
     </header>
 
     @if (justCreatedCode) {
       <div class="new-group-banner">
-        Gruppo creato! Condividi il codice <strong>{{ justCreatedCode }}</strong> con il tuo team.
+        Group created! Share the code <strong>{{ justCreatedCode }}</strong> with your team.
         <button (click)="justCreatedCode = null">✕</button>
       </div>
     }
 
     @if (showForm()) {
       <form class="new-form" (ngSubmit)="addTodo()">
-        <input [(ngModel)]="form.title" name="title" placeholder="Titolo *" required />
-        <textarea [(ngModel)]="form.notes" name="notes" placeholder="Note" rows="2"></textarea>
-        <input [(ngModel)]="form.tags" name="tags" placeholder="Tag (es. lavoro, urgente)" />
+        <input [(ngModel)]="form.title" name="title" placeholder="Title *" required />
+        <textarea [(ngModel)]="form.notes" name="notes" placeholder="Notes" rows="2"></textarea>
+        <input [(ngModel)]="form.tags" name="tags" placeholder="Tags (e.g. work, urgent)" />
         <select [(ngModel)]="form.swimlaneId" name="swimlaneId">
           @for (lane of swimlanes(); track lane._id?.$oid) {
             <option [value]="lane._id!.$oid">{{ lane.name }}</option>
           }
         </select>
 
-        <!-- Assignees -->
         <div class="assignees-field">
           <div class="assignees-chips">
             @for (a of formAssignees; track a) {
@@ -68,7 +110,7 @@
           </div>
           <div class="assignee-input-row">
             <input [(ngModel)]="pendingAssignee" name="assignee"
-                   placeholder="Assegna a… (Enter per aggiungere)"
+                   placeholder="Assign to… (Enter to add)"
                    list="assignee-suggestions"
                    (keydown)="onAssigneeKey($event)"
                    autocomplete="off" />
@@ -80,7 +122,7 @@
           </div>
         </div>
 
-        <button type="submit">Aggiungi</button>
+        <button type="submit">Add</button>
       </form>
     }
 
@@ -112,9 +154,9 @@
                        (click)="$event.stopPropagation()"
                        autofocus />
               } @else {
-                <span class="lane-name" (dblclick)="startRename(lane)" title="Doppio click per rinominare">{{ lane.name }}</span>
+                <span class="lane-name" (dblclick)="startRename(lane)" title="Double-click to rename">{{ lane.name }}</span>
               }
-              <button class="btn-icon" (click)="deleteLane(lane)" title="Elimina swimlane">✕</button>
+              <button class="btn-icon" (click)="deleteLane(lane)" title="Delete swimlane">✕</button>
             </div>
 
             @for (status of statuses; track status) {
@@ -149,7 +191,7 @@
                       <span class="card-date">{{ formatDate(todo.createdAt) }}</span>
                       @if (confirmingId === todo._id?.$oid) {
                         <span class="confirm-delete">
-                          <button class="btn-confirm-yes" (click)="confirmDelete(todo)">Elimina</button>
+                          <button class="btn-confirm-yes" (click)="confirmDelete(todo)">Delete</button>
                           <button class="btn-confirm-no" (click)="cancelDelete()">No</button>
                         </span>
                       } @else {
@@ -169,9 +211,9 @@
       <div class="add-lane">
         @if (showLaneForm) {
           <form class="lane-form" (ngSubmit)="addLane()">
-            <input [(ngModel)]="newLaneName" name="laneName" placeholder="Nome swimlane" autofocus />
-            <button type="submit">Aggiungi</button>
-            <button type="button" (click)="showLaneForm = false">Annulla</button>
+            <input [(ngModel)]="newLaneName" name="laneName" placeholder="Swimlane name" autofocus />
+            <button type="submit">Add</button>
+            <button type="button" (click)="showLaneForm = false">Cancel</button>
           </form>
         } @else {
           <button class="btn-add-lane" (click)="showLaneForm = true">+ Swimlane</button>

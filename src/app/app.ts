@@ -16,16 +16,23 @@ export class App implements OnInit {
   private laneSvc = inject(SwimlaneService);
   readonly groupSvc = inject(GroupService);
 
-  todos = signal<Todo[]>([]);
-  swimlanes = signal<Swimlane[]>([]);
-  showForm = signal(false);
-  showLaneForm = false;
+  todos      = signal<Todo[]>([]);
+  swimlanes  = signal<Swimlane[]>([]);
+  showForm   = signal(false);
+  showLaneForm  = false;
   confirmingId: string | null = null;
-  renamingId: string | null = null;
+  renamingId:   string | null = null;
   renameValue = '';
-  newGroupCode = '';
   justCreatedCode: string | null = null;
   copied = false;
+
+  // group screen
+  newGroupName = '';
+  newGroupCode = '';
+
+  // group rename in header
+  renamingGroup = false;
+  renameGroupValue = '';
 
   readonly statuses: Status[] = ['open', 'in-progress', 'blocked', 'closed'];
   readonly statusLabels: Record<Status, string> = {
@@ -71,7 +78,9 @@ export class App implements OnInit {
   }
 
   createGroup() {
-    const code = this.groupSvc.create();
+    const name = this.newGroupName.trim() || 'New group';
+    const code = this.groupSvc.create(name);
+    this.newGroupName = '';
     this.justCreatedCode = code;
     this.loadAll();
   }
@@ -81,6 +90,18 @@ export class App implements OnInit {
     this.groupSvc.join(this.newGroupCode);
     this.newGroupCode = '';
     this.justCreatedCode = null;
+    this.todos.set([]);
+    this.swimlanes.set([]);
+    this.form.swimlaneId = '';
+    this.loadAll();
+  }
+
+  switchGroup(code: string) {
+    this.groupSvc.join(code);
+    this.justCreatedCode = null;
+    this.todos.set([]);
+    this.swimlanes.set([]);
+    this.form.swimlaneId = '';
     this.loadAll();
   }
 
@@ -96,6 +117,26 @@ export class App implements OnInit {
     navigator.clipboard.writeText(this.groupSvc.code()!);
     this.copied = true;
     setTimeout(() => this.copied = false, 2000);
+  }
+
+  startGroupRename() {
+    this.renameGroupValue = this.groupSvc.activeGroup()?.name ?? '';
+    this.renamingGroup = true;
+  }
+
+  commitGroupRename() {
+    this.renamingGroup = false;
+    const name = this.renameGroupValue.trim();
+    if (name && this.groupSvc.code()) this.groupSvc.rename(this.groupSvc.code()!, name);
+  }
+
+  importBackup(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => this.groupSvc.importBackup(e.target?.result as string);
+    reader.readAsText(file);
+    (event.target as HTMLInputElement).value = '';
   }
 
   getCards(laneId: string, status: Status): Todo[] {

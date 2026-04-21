@@ -6,7 +6,7 @@
 
 > A collaborative Kanban board with zero backend code — powered by **RESTHeart Cloud**.
 
-![Todo Board screenshot](https://todo.softinstigate.com/preview.png)
+<img width="1249" height="765" alt="immagine" src="https://github.com/user-attachments/assets/6ab85038-e1a7-4edf-bfb6-ebb894cbf0fe" />
 
 ---
 

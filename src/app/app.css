@@ -218,6 +218,22 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
   cursor: pointer;
 }
 .group-code-value:hover { text-decoration: underline; }
+.group-code-masked {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+}
+.code-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  padding: 0 2px;
+  text-decoration: underline;
+}
+.code-toggle-btn:hover { color: var(--accent); }
 
 .btn-leave {
   background: none;

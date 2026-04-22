@@ -137,9 +137,15 @@
             </span>
           }
           <span class="group-sep">·</span>
-          <span class="group-code-value" (click)="copyCode()" title="Click to copy">
-            {{ groupSvc.code() }} {{ copied ? '✓' : '📋' }}
-          </span>
+          @if (codeVisible) {
+            <span class="group-code-value" (click)="copyCode()" title="Click to copy">
+              {{ groupSvc.code() }} {{ copied ? '✓' : '📋' }}
+            </span>
+            <button class="code-toggle-btn" (click)="codeVisible = false">hide</button>
+          } @else {
+            <span class="group-code-masked">••••••••</span>
+            <button class="code-toggle-btn" (click)="codeVisible = true">show</button>
+          }
         </div>
         <button class="btn-primary" (click)="showForm.set(!showForm())">
           {{ showForm() ? '✕ Close' : '+ New task' }}

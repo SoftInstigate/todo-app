@@ -31,6 +31,7 @@ export class App implements OnInit {
   renameValue = '';
   justCreatedCode: string | null = null;
   copied = false;
+  codeVisible = false;
   showForgotten = signal(false);
   confirmingClean = false;
 

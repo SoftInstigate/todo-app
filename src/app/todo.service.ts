@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { map } from 'rxjs';
+import { map, expand, reduce, EMPTY } from 'rxjs';
 import { GroupService } from './group.service';
 import { environment } from '../environments/environment';
 
@@ -36,7 +36,12 @@ export class TodoService {
     if (!includeForgotten) {
       params['filter'] = JSON.stringify({ status: { $ne: 'closed_and_forgot' } });
     }
-    return this.http.get<Todo[]>(BASE, { headers: HEADERS, params });
+    const fetchPage = (page: number) =>
+      this.http.get<Todo[]>(BASE, { headers: HEADERS, params: { ...params, page: String(page) } });
+    return fetchPage(1).pipe(
+      expand((todos, index) => todos.length > 0 ? fetchPage(index + 2) : EMPTY),
+      reduce((acc, todos) => [...acc, ...todos], [] as Todo[]),
+    );
   }
 
   create(data: { title: string; notes?: string; tags?: string[]; swimlaneId?: string; assignees?: string[] }) {

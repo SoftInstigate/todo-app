@@ -48,6 +48,7 @@ export class App implements OnInit {
   editForm = { title: '', notes: '', tags: '', swimlaneId: '', status: 'open' as Status };
   editAssignees: string[] = [];
   editPendingAssignee = '';
+  editDependsOn = signal<string[]>([]);
 
   readonly statuses: Status[] = ['open', 'in-progress', 'blocked', 'closed'];
   readonly statusLabels: Record<Status, string> = {
@@ -71,6 +72,37 @@ export class App implements OnInit {
     return [...names].sort();
   });
 
+  selectedDepIds = computed(() => this.selectedTodo()?.dependsOn ?? []);
+
+  selectedInverseDepIds = computed(() => {
+    const id = this.selectedTodo()?._id?.$oid;
+    if (!id) return [];
+    return this.todos().filter(t => t.dependsOn?.includes(id)).map(t => t._id!.$oid);
+  });
+
+  availableDeps = computed(() => {
+    const selectedId = this.selectedTodo()?._id?.$oid;
+    const current = this.editDependsOn();
+    return this.todos()
+      .filter(t => t._id?.$oid !== selectedId && !current.includes(t._id?.$oid ?? ''))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  });
+
+  depTodosForDisplay = computed(() => {
+    const ids = this.editDependsOn();
+    return this.todos().filter(t => ids.includes(t._id?.$oid ?? ''));
+  });
+
+  dependentCounts = computed(() => {
+    const counts = new Map<string, number>();
+    for (const t of this.todos()) {
+      for (const id of t.dependsOn ?? []) {
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+    }
+    return counts;
+  });
+
   constructor() {
     effect(() => {
       this.showForgotten();
@@ -87,6 +119,7 @@ export class App implements OnInit {
       if (!updated) return;
       this.editForm.status = updated.status;
       this.editForm.swimlaneId = updated.swimlaneId ?? this.swimlanes()[0]?._id?.$oid ?? '';
+      this.editDependsOn.set([...(updated.dependsOn ?? [])]);
     });
 
     // Delete events: remove locally by _id — safe even if cross-group (id won't match)
@@ -214,6 +247,7 @@ export class App implements OnInit {
     };
     this.editAssignees = [...(todo.assignees ?? [])];
     this.editPendingAssignee = '';
+    this.editDependsOn.set([...(todo.dependsOn ?? [])]);
     this.selectedTodo.set(todo);
   }
 
@@ -231,6 +265,7 @@ export class App implements OnInit {
       assignees:  [...this.editAssignees],
       status:     this.editForm.status,
       swimlaneId: this.editForm.swimlaneId,
+      dependsOn:  [...this.editDependsOn()],
     }).subscribe(() => {
       this.selectedTodo.set(null);
       this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t));
@@ -252,6 +287,17 @@ export class App implements OnInit {
 
   removeEditAssignee(name: string) {
     this.editAssignees = this.editAssignees.filter(a => a !== name);
+  }
+
+  addDep(event: Event) {
+    const id = (event.target as HTMLSelectElement).value;
+    (event.target as HTMLSelectElement).value = '';
+    if (!id || this.editDependsOn().includes(id)) return;
+    this.editDependsOn.update(deps => [...deps, id]);
+  }
+
+  removeDep(id: string) {
+    this.editDependsOn.update(deps => deps.filter(d => d !== id));
   }
 
   // ── Board ────────────────────────────────────────────────────────────────────

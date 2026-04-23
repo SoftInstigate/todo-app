@@ -95,6 +95,22 @@
         }
       </datalist>
 
+      <label class="field-label">Dependencies</label>
+      <div class="assignees-chips">
+        @for (dep of depTodosForDisplay(); track dep._id?.$oid) {
+          <span class="assignee-chip dep-chip">
+            <span class="dep-chip-title">{{ dep.title }}</span>
+            <button type="button" (click)="removeDep(dep._id!.$oid)">✕</button>
+          </span>
+        }
+      </div>
+      <select class="panel-input" (change)="addDep($event)">
+        <option value="">Add dependency…</option>
+        @for (t of availableDeps(); track t._id?.$oid) {
+          <option [value]="t._id!.$oid">{{ t.title }}</option>
+        }
+      </select>
+
       <label class="field-label">Tags</label>
       <input class="panel-input" [(ngModel)]="editForm.tags" name="editTags" placeholder="work, urgent" />
 
@@ -220,7 +236,7 @@
         }
       </div>
 
-      <div cdkDropList
+<div cdkDropList
            cdkDropListOrientation="vertical"
            [cdkDropListData]="swimlanes()"
            (cdkDropListDropped)="onLaneDrop($event)"
@@ -259,9 +275,12 @@
 
                 @for (todo of getCards(lane._id!.$oid, status); track todo._id?.$oid) {
                   <div cdkDrag [cdkDragData]="todo"
+                       [id]="'card-' + todo._id!.$oid"
                        class="todo-card"
                        [class.todo-card--selected]="selectedTodo()?._id?.$oid === todo._id?.$oid"
                        [class.todo-card--archived]="todo.status === 'closed_and_forgot'"
+                       [class.todo-card--dep-target]="selectedDepIds().includes(todo._id?.$oid ?? '')"
+                       [class.todo-card--dep-inverse]="selectedInverseDepIds().includes(todo._id?.$oid ?? '')"
                        (click)="openTask(todo, $event)">
                     <span class="card-drag-handle" cdkDragHandle>⠿</span>
                     <div class="card-title">{{ todo.title }}</div>
@@ -284,6 +303,12 @@
                     }
                     <div class="card-footer">
                       <span class="card-date">{{ formatDate(todo.createdAt) }}</span>
+                      @if (todo.dependsOn?.length) {
+                        <span class="dep-badge" [title]="'Depends on ' + todo.dependsOn!.length + ' task(s)'">⤴{{ todo.dependsOn!.length }}</span>
+                      }
+                      @if (dependentCounts().get(todo._id?.$oid ?? '')) {
+                        <span class="dep-badge" [title]="dependentCounts().get(todo._id!.$oid)! + ' task(s) depend on this'">⤵{{ dependentCounts().get(todo._id!.$oid) }}</span>
+                      }
                       @if (confirmingId === todo._id?.$oid) {
                         <span class="confirm-delete">
                           <button class="btn-confirm-yes" (click)="confirmDelete(todo); $event.stopPropagation()">Delete</button>

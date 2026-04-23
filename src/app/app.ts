@@ -75,9 +75,22 @@ export class App implements OnInit {
   selectedDepIds = computed(() => this.selectedTodo()?.dependsOn ?? []);
 
   selectedInverseDepIds = computed(() => {
-    const id = this.selectedTodo()?._id?.$oid;
-    if (!id) return [];
-    return this.todos().filter(t => t.dependsOn?.includes(id)).map(t => t._id!.$oid);
+    const rootId = this.selectedTodo()?._id?.$oid;
+    if (!rootId) return [];
+    const todos = this.todos();
+    const visited = new Set<string>();
+    const queue = [rootId];
+    while (queue.length) {
+      const current = queue.shift()!;
+      for (const t of todos) {
+        const tid = t._id?.$oid ?? '';
+        if (!visited.has(tid) && t.dependsOn?.includes(current)) {
+          visited.add(tid);
+          queue.push(tid);
+        }
+      }
+    }
+    return [...visited];
   });
 
   availableDeps = computed(() => {

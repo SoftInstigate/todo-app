@@ -19,6 +19,7 @@ export interface Todo {
   notes?: string;
   tags?: string[];
   dependsOn?: string[];
+  order?: number;
   createdAt: { $date: number };
   closedAt?: { $date: number };
 }
@@ -57,7 +58,7 @@ export class TodoService {
     }, { headers: HEADERS, params: { groupId: this.groupId } });
   }
 
-  update(todo: Todo, patch: { title?: string; notes?: string; tags?: string[]; assignees?: string[]; status?: Status; swimlaneId?: string; dependsOn?: string[] }) {
+  update(todo: Todo, patch: { title?: string; notes?: string; tags?: string[]; assignees?: string[]; status?: Status; swimlaneId?: string; dependsOn?: string[]; order?: number }) {
     const id = todo._id!.$oid;
     const $set: any = { ...patch };
     const body: any = { $set };

@@ -330,7 +330,12 @@ export class App implements OnInit {
       status === 'closed' && this.showForgotten()
         ? t.status === 'closed' || t.status === 'closed_and_forgot'
         : t.status === status;
-    return this.todos().filter(t => (t.swimlaneId ?? fallbackId) === laneId && matchStatus(t));
+    return this.todos()
+      .filter(t => (t.swimlaneId ?? fallbackId) === laneId && matchStatus(t))
+      .sort((a, b) => {
+        const od = (a.order ?? 0) - (b.order ?? 0);
+        return od !== 0 ? od : a.createdAt.$date - b.createdAt.$date;
+      });
   }
 
   addAssignee(name: string) {
@@ -369,9 +374,24 @@ export class App implements OnInit {
   }
 
   onCardDrop(event: CdkDragDrop<{ laneId: string; status: Status }>) {
-    if (event.previousContainer === event.container) return;
     const todo: Todo = event.item.data;
     const { laneId, status } = event.container.data;
+
+    if (event.previousContainer === event.container) {
+      const cards = this.getCards(laneId, status);
+      moveItemInArray(cards, event.previousIndex, event.currentIndex);
+      this.todos.update(ts => {
+        const updated = [...ts];
+        cards.forEach((card, idx) => {
+          const i = updated.findIndex(t => t._id?.$oid === card._id?.$oid);
+          if (i >= 0) updated[i] = { ...updated[i], order: idx * 1000 };
+        });
+        return updated;
+      });
+      forkJoin(cards.map((card, idx) => this.todoSvc.update(card, { order: idx * 1000 }))).subscribe();
+      return;
+    }
+
     this.todoSvc.update(todo, { status, swimlaneId: laneId }).subscribe(() =>
       this.todoSvc.getAll(this.showForgotten()).subscribe(t => this.todos.set(t))
     );

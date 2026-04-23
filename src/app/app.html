@@ -227,7 +227,7 @@
            class="lanes-container">
 
         @for (lane of swimlanes(); track lane._id?.$oid) {
-          <div cdkDrag [cdkDragData]="lane" class="swimlane-row">
+          <div cdkDrag [cdkDragData]="lane" [cdkDragStartDelay]="{touch: 300, mouse: 0}" class="swimlane-row">
             <div class="lane-header" cdkDragHandle>
               <span class="drag-icon">⠿</span>
               @if (renamingId === lane._id?.$oid) {
@@ -258,7 +258,7 @@
                    class="kanban-cell">
 
                 @for (todo of getCards(lane._id!.$oid, status); track todo._id?.$oid) {
-                  <div cdkDrag [cdkDragData]="todo"
+                  <div cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="{touch: 300, mouse: 0}"
                        class="todo-card"
                        [class.todo-card--selected]="selectedTodo()?._id?.$oid === todo._id?.$oid"
                        [class.todo-card--archived]="todo.status === 'closed_and_forgot'"

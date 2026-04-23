@@ -8,3 +8,7 @@ body {
   min-height: 100vh;
   color: #e0e0e0;
 }
+
+@media (max-width: 640px) {
+  html, body { height: 100%; overflow: hidden; }
+}

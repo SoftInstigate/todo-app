@@ -395,6 +395,8 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
 .swimlane-row {
   border-bottom: 1px solid var(--border);
   align-items: stretch;
+  cursor: default !important;
+  touch-action: auto !important;
 }
 .swimlane-row.cdk-drag-animating { transition: transform 250ms cubic-bezier(0,0,0.2,1); }
 .cdk-drag-preview.swimlane-row {
@@ -419,11 +421,11 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
   padding: 14px 12px;
   background: var(--surface2);
   border-right: 1px solid var(--border);
-  cursor: grab;
 }
-.lane-header:active { cursor: grabbing; }
 
-.drag-icon { color: var(--text-dim); font-size: 1.1rem; line-height: 1; }
+
+.drag-icon { color: var(--text-dim); font-size: 1.1rem; line-height: 1; cursor: grab; }
+.drag-icon:active { cursor: grabbing; }
 
 .lane-name {
   flex: 1;
@@ -494,7 +496,6 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
 }
 .card-drag-handle:active { cursor: grabbing; }
 .todo-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.4); border-color: var(--border2); }
-.todo-card:active { cursor: grabbing; }
 .todo-card.cdk-drag-animating { transition: transform 250ms cubic-bezier(0,0,0.2,1); }
 .cdk-drag-preview {
   box-shadow: 0 8px 32px rgba(0,0,0,0.6);
@@ -647,7 +648,8 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
   flex-shrink: 0;
 }
 
-.todo-card--selected {
+.todo-card--selected,
+.todo-card--selected:hover {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(124,111,255,0.25);
 }
@@ -730,8 +732,19 @@ h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
   .group-screen { align-items: flex-start; padding: 24px 16px; }
   .group-card { border-radius: 16px; padding: 32px 20px; }
 
-  /* Board */
-  .board-wrapper { padding: 14px 12px; }
+  /* Board: single 2D scroll container on mobile */
+  .board-wrapper {
+    padding: 14px 12px;
+    height: 100svh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .kanban-board {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+  }
 
   .board-header {
     flex-wrap: wrap;

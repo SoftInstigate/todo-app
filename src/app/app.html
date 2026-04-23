@@ -228,8 +228,8 @@
 
         @for (lane of swimlanes(); track lane._id?.$oid) {
           <div cdkDrag [cdkDragData]="lane" class="swimlane-row">
-            <div class="lane-header" cdkDragHandle>
-              <span class="drag-icon">⠿</span>
+            <div class="lane-header">
+              <span class="drag-icon" cdkDragHandle>⠿</span>
               @if (renamingId === lane._id?.$oid) {
                 <input class="lane-rename-input"
                        [(ngModel)]="renameValue"

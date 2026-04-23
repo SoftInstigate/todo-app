@@ -79,6 +79,16 @@ export class App implements OnInit {
       }
     });
 
+    // Sync editForm when the selected todo is updated externally (e.g. drag-and-drop, WebSocket)
+    effect(() => {
+      const selected = this.selectedTodo();
+      if (!selected) return;
+      const updated = this.todos().find(t => t._id?.$oid === selected._id?.$oid);
+      if (!updated) return;
+      this.editForm.status = updated.status;
+      this.editForm.swimlaneId = updated.swimlaneId ?? this.swimlanes()[0]?._id?.$oid ?? '';
+    });
+
     // Delete events: remove locally by _id — safe even if cross-group (id won't match)
     this.realtimeSvc.changes
       .pipe(filter(e => e.op === 'delete'), takeUntilDestroyed(this.destroyRef))

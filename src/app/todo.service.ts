@@ -76,7 +76,7 @@ export class TodoService {
   hasBySwimlane(swimlaneId: string) {
     return this.http.get<Todo[]>(BASE, {
       headers: HEADERS,
-      params: { groupId: this.groupId, filter: JSON.stringify({ swimlaneId }), pagesize: '1' },
+      params: { groupId: this.groupId, filter: JSON.stringify({ swimlaneId, status: { $ne: 'closed_and_forgot' } }), pagesize: '1' },
     }).pipe(map(todos => todos.length > 0));
   }
 

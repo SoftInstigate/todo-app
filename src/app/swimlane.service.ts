@@ -12,6 +12,7 @@ export interface Swimlane {
   name: string;
   order: number;
   groupId?: string;
+  hidden?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -26,7 +27,7 @@ export class SwimlaneService {
   getAll() {
     return this.http.get<Swimlane[]>(BASE, {
       headers: HEADERS,
-      params: { groupId: this.groupId, sort: '{"order":1}' },
+      params: { groupId: this.groupId, sort: '{"order":1}', filter: '{"hidden":{"$ne":true}}' },
     });
   }
 
@@ -56,7 +57,7 @@ export class SwimlaneService {
   }
 
   delete(lane: Swimlane) {
-    return this.http.delete(`${BASE}/${lane._id!.$oid}`, {
+    return this.http.patch(`${BASE}/${lane._id!.$oid}`, { hidden: true }, {
       headers: HEADERS,
       params: { groupId: this.groupId },
     });
